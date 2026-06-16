@@ -57,10 +57,10 @@ CDT binary (1G SDRAM):
 | Partition | Size | Start LBA | Description |
 |-----------|------|-----------|-------------|
 | 0:SBL1 ~ 0:ART (15 parts) | ~8 MB | 34–16929 | Boot firmware (unchanged) |
-| **0:HLOS** | **16 MB** | 16930–49697 | Kernel/FIT image (主核) |
-| **0:HLOS_1** | **6 MB** | 49698–61985 | Kernel/FIT image (备份核) |
-| rootfs | 1024 MB | 61986–2275233 | Root filesystem (squashfs) |
-| storage | ~6.25 GB | 2275234–15269854 | User data / overlay |
+| **0:HLOS** | **12 MB** | 16930–41505 | Kernel/FIT image (主核) |
+| **0:HLOS_1** | **6 MB** | 41506–53793 | Kernel/FIT image (备份核) |
+| rootfs | 1024 MB | 53794–2150945 | Root filesystem (squashfs) |
+| storage | ~6.26 GB | 2150946–15269854 | User data / overlay |
 
 ### Flashing
 

@@ -147,10 +147,10 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 		readonly="false"
 		filename=""
 		/>
-	<!-- HLOS: 16MB (主核, 存放 kernel FIT image) -->
+	<!-- HLOS: 12MB (主核, 存放 kernel FIT image) -->
 	<partition
 		label="0:HLOS"
-		size_in_kb="16384"
+		size_in_kb="12288"
 		type="B51F2982-3EBE-46DE-8721-EE641E1F9997"
 		bootable="false"
 		readonly="false"
