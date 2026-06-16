@@ -48,4 +48,4 @@ jobs:
           files: gpt_main0-re-cs-07.bin
           fail_on_unmatched_files: false
           make_latest: false
-          draft: true
+          draft: false
