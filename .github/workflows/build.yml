@@ -6,30 +6,10 @@ on:
   pull_request:
     branches: [test]
   workflow_dispatch:
-    inputs:
-      config:
-        description: 'Config to build (all / ipq6018-re-cs-07 / ipq6018)'
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - ipq6018-re-cs-07
-          - ipq6018
 
 jobs:
   generate-gpt:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        config:
-          - name: ipq6018-re-cs-07
-            desc: 're-cs-07 (8GB eMMC, simplified layout, HLOS=16MB)'
-            args: '-c meta-tools/ipq6018-re-cs-07/config.xml'
-            output: gpt_main0-re-cs-07.bin
-          - name: ipq6018
-            desc: 'Factory FSEIASLD-64G-J02 (64GB eMMC, full layout, Python 2.7 QSDK)'
-            args: ''
-            output: gpt_main0-factory.bin
 
     steps:
       - uses: actions/checkout@v4
@@ -39,89 +19,33 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Setup Python 2.7 (for factory config)
-        if: matrix.config.name == 'ipq6018'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '2.7'
-          update-environment: false  # keep python3 as default
-
-      - name: Generate ${{ matrix.config.name }} GPT
-        env:
-          CFG_NAME: ${{ matrix.config.name }}
-          CFG_DESC: ${{ matrix.config.desc }}
-          CFG_ARGS: ${{ matrix.config.args }}
-          CFG_OUT: ${{ matrix.config.output }}
+      - name: Generate re-cs-07 GPT
         run: |
-          echo "Building: $CFG_DESC"
-
-          if [ "$CFG_NAME" = "ipq6018-re-cs-07" ]; then
-            python3 generate_gpt.py $CFG_ARGS -o "$CFG_OUT" -d output
-          elif [ "$CFG_NAME" = "ipq6018" ]; then
-            # Factory config uses original QSDK toolchain (Python 2.7)
-            cd meta-tools/
-            python2 prepareSingleImage.py --arch ipq6018 --fltype emmc --genpart --gencdt
-            cd ..
-            if [ -f "meta-tools/ipq6018/in/gpt_main0.bin" ]; then
-              cp meta-tools/ipq6018/in/gpt_main0.bin "output/$CFG_OUT"
-              # Also collect CDT
-              mkdir -p output/cdt
-              cp meta-tools/ipq6018/in/cdt-*.bin output/cdt/ || true
-            else
-              echo "::warning::Factory config requires QSDK Python 2.7 tools. gpt_main0.bin not found."
-            fi
-          fi
+          python3 generate_gpt.py -c meta-tools/ipq6018-re-cs-07/config.xml -o gpt_main0-re-cs-07.bin -d output
 
       - name: Upload GPT artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gpt-${{ matrix.config.name }}
-          path: output/
-          if-no-files-found: warn
-
-  generate-cdt:
-    # CDT only from factory config (requires Python 2.7 QSDK tools)
-    runs-on: ubuntu-latest
-    needs: [generate-gpt]
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python 2.7
-        uses: actions/setup-python@v5
-        with:
-          python-version: '2.7'
-
-      - name: Generate CDT
-        continue-on-error: true
-        run: |
-          cd meta-tools/
-          python2 prepareSingleImage.py --arch ipq6018 --fltype emmc --gencdt || echo "CDT generation skipped (QSDK tools may need extra deps)"
-
-      - name: Upload CDT artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cdt-binaries
-          path: meta-tools/ipq6018/in/cdt-*.bin
-          if-no-files-found: warn
+          name: gpt-re-cs-07
+          path: output/gpt_main0-re-cs-07.bin
+          if-no-files-found: error
 
   release:
     needs: [generate-gpt]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/test' && github.event_name != 'pull_request'
     steps:
-      - name: Download all artifacts
+      - name: Download GPT artifact
         uses: actions/download-artifact@v4
+        with:
+          name: gpt-re-cs-07
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build-${{ github.run_number }}
           name: Test Build #${{ github.run_number }}
-          files: |
-            gpt-ipq6018-re-cs-07/gpt_main0-re-cs-07.bin
-            gpt-ipq6018/gpt_main0-factory.bin
-            gpt-ipq6018/cdt/*.bin
+          files: gpt_main0-re-cs-07.bin
           fail_on_unmatched_files: false
           make_latest: false
           draft: true
