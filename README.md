@@ -47,7 +47,7 @@ prepareSingleImage.py --arch ipq6018 --fltype emmc --gencdt --genpart
 | Config | Target | Description | File |
 |--------|--------|-------------|------|
 | `ipq6018` | Factory (FSEIASLD-64G-J02) | 64GB eMMC, full layout | `meta-tools/ipq6018/in/gpt_main0.bin` |
-| `ipq6018-re-cs-07` | re-cs-07 (8GB eMMC) | Simplified layout, HLOS=16MB | `output/gpt_main0.bin` |
+| `ipq6018-re-cs-07` | re-cs-07 (8GB eMMC) | HLOS=16MB + HLOS_1=6MB dual | `output/gpt_main0.bin` |
 
 CDT binary (1G SDRAM):
 `meta-tools/ipq6018/in/cdt-AP-CP03-C2_Arthur_512M16(1G)_DDR3.bin`
@@ -57,9 +57,10 @@ CDT binary (1G SDRAM):
 | Partition | Size | Start LBA | Description |
 |-----------|------|-----------|-------------|
 | 0:SBL1 ~ 0:ART (15 parts) | ~8 MB | 34–16929 | Boot firmware (unchanged) |
-| **0:HLOS** | **16 MB** | 16930–49697 | Kernel/FIT image |
-| rootfs | 1024 MB | 49698–2146849 | Root filesystem (squashfs) |
-| storage | ~6.26 GB | 2146850–15269854 | User data / overlay |
+| **0:HLOS** | **16 MB** | 16930–49697 | Kernel/FIT image (主核) |
+| **0:HLOS_1** | **6 MB** | 49698–61985 | Kernel/FIT image (备份核) |
+| rootfs | 1024 MB | 61986–2275233 | Root filesystem (squashfs) |
+| storage | ~6.25 GB | 2275234–15269854 | User data / overlay |
 
 ### Flashing
 

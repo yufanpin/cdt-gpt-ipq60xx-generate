@@ -7,10 +7,9 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 ===========================================================================
 -->
 <!--
-	re-cs-07 简化分区布局
-	基于 192.168.1.1 当前 GPT 分区布局
-	HLOS 从 6MB 改为 16MB
-	移除了 HLOS_1, rootfs_1, WIFIFW, WIFIFW_1, rootfs_data,
+	re-cs-07 分区布局
+	HLOS=16MB, HLOS_1=6MB 双分区升级
+	移除了 rootfs_1, WIFIFW, WIFIFW_1, rootfs_data,
 	ETHPHYFW, plugin, log, swap 等分区
 -->
 
@@ -148,7 +147,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 		readonly="false"
 		filename=""
 		/>
-	<!-- HLOS: 16MB (原厂 6MB, re-cs-07 改为 16MB) -->
+	<!-- HLOS: 16MB (主核, 存放 kernel FIT image) -->
 	<partition
 		label="0:HLOS"
 		size_in_kb="16384"
@@ -160,7 +159,16 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 		filename_32="openwrt-ipq-ipq60xx-qcom-ipq60xx-cpxx-fit-uImage.itb"
 		filename_64="openwrt-ipq-ipq60xx_64-qcom-ipq60xx-cpxx-fit-uImage.itb"
 		/>
-	<!-- rootfs: 1024MB (原厂 60MB, 当前设备使用 1024MB) -->
+	<!-- HLOS_1: 6MB (备份核, 双分区升级用) -->
+	<partition
+		label="0:HLOS_1"
+		size_in_kb="6144"
+		type="A71DA577-7F81-4626-B4A2-E377F9174525"
+		bootable="false"
+		readonly="false"
+		filename=""
+		/>
+	<!-- rootfs: 1024MB -->
 	<partition
 		label="rootfs"
 		size_in_kb="1048576"
