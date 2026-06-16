@@ -6,10 +6,39 @@ on:
   pull_request:
     branches: [test]
   workflow_dispatch:
+    inputs:
+      hlos_config:
+        description: 'HLOS 分区配置'
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - hlos12p6
+          - hlos12p12
+          - hlos16p16
+          - hlos16
 
 jobs:
-  generate-gpt:
+  # Generate matrix at runtime
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          CONFIGS='["hlos12p6","hlos12p12","hlos16p16","hlos16"]'
+          # workflow_dispatch with specific config → only build that one
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.hlos_config }}" != "all" ]; then
+            CONFIGS='["${{ inputs.hlos_config }}"]'
+          fi
+          echo "matrix={\"hlos\":$CONFIGS}" >> $GITHUB_OUTPUT
+
+  generate-gpt:
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -19,15 +48,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Generate re-cs-07 GPT
+      - name: Generate ${{ matrix.hlos }}
         run: |
-          python3 generate_gpt.py -c meta-tools/ipq6018-re-cs-07/config.xml -o gpt_main0-re-cs-07.bin -d output
+          case "${{ matrix.hlos }}" in
+            hlos12p6)   ARGS="--hlos 12 --hlos1 6"  ;;
+            hlos12p12)  ARGS="--hlos 12 --hlos1 12" ;;
+            hlos16p16)  ARGS="--hlos 16 --hlos1 16" ;;
+            hlos16)     ARGS="--hlos 16 --no-hlos1"   ;;
+          esac
+          python3 generate_gpt.py -c meta-tools/ipq6018-re-cs-07/config.xml $ARGS -d output
 
       - name: Upload GPT artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gpt-re-cs-07
-          path: output/gpt_main0-re-cs-07.bin
+          name: gpt-re-cs-07-${{ matrix.hlos }}
+          path: output/gpt_main0-*.bin
           if-no-files-found: error
 
   release:
@@ -35,17 +70,19 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/test' && github.event_name != 'pull_request'
     steps:
-      - name: Download GPT artifact
+      - name: Download all GPT artifacts
         uses: actions/download-artifact@v4
-        with:
-          name: gpt-re-cs-07
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build-${{ github.run_number }}
           name: Test Build #${{ github.run_number }}
-          files: gpt_main0-re-cs-07.bin
+          files: |
+            gpt-re-cs-07-hlos12p6/gpt_main0-hlos12p6.bin
+            gpt-re-cs-07-hlos12p12/gpt_main0-hlos12p12.bin
+            gpt-re-cs-07-hlos16p16/gpt_main0-hlos16p16.bin
+            gpt-re-cs-07-hlos16/gpt_main0-hlos16.bin
           fail_on_unmatched_files: false
           make_latest: false
           draft: false

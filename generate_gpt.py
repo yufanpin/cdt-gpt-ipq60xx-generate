@@ -380,6 +380,7 @@ def main():
 Examples:
   %(prog)s -c meta-tools/ipq6018-re-cs-07/config.xml
   %(prog)s -c meta-tools/ipq6018-re-cs-07/config.xml -o output/gpt_main0.bin
+  %(prog)s -c meta-tools/ipq6018-re-cs-07/config.xml --hlos 16 --hlos1 16
   %(prog)s -p partition.xml -s 15269888 -o gpt_main0.bin
         """
     )
@@ -389,6 +390,9 @@ Examples:
     parser.add_argument('-o', '--output', default='gpt_main0.bin', help='Output file path (default: gpt_main0.bin)')
     parser.add_argument('-d', '--output-dir', default='output', help='Output directory (default: output/)')
     parser.add_argument('--full-disk', action='store_true', help='Output full disk image (all sectors zero-filled) instead of just primary GPT (34 sectors)')
+    parser.add_argument('--hlos', type=int, metavar='MB', help='Override 0:HLOS size in MB (e.g. 12 for 12MB)')
+    parser.add_argument('--hlos1', type=int, metavar='MB', help='Override 0:HLOS_1 size in MB (e.g. 6 for 6MB)')
+    parser.add_argument('--no-hlos1', action='store_true', help='Remove 0:HLOS_1 partition entirely')
 
     args = parser.parse_args()
 
@@ -440,6 +444,33 @@ Examples:
 
     print(f"[*] Partitions found: {len(partitions)}")
     print(f"[*] GROW_LAST       : {grow_last}")
+
+    # Apply HLOS overrides
+    hlos_tag = ""
+    if args.no_hlos1:
+        # Remove 0:HLOS_1 from partition list
+        partitions[:] = [p for p in partitions if p['label'] != '0:HLOS_1']
+        print(f"[*] 0:HLOS_1 removed")
+    if args.hlos is not None:
+        for part in partitions:
+            if part['label'] == '0:HLOS':
+                old_kb = part['size_kb']
+                part['size_kb'] = float(args.hlos * 1024)
+                print(f"[*] 0:HLOS overridden: {old_kb/1024:.0f}MB -> {args.hlos}MB")
+                break
+        hlos_tag = f"hlos{args.hlos}"
+    if args.hlos1 is not None:
+        for part in partitions:
+            if part['label'] == '0:HLOS_1':
+                old_kb = part['size_kb']
+                part['size_kb'] = float(args.hlos1 * 1024)
+                print(f"[*] 0:HLOS_1 overridden: {old_kb/1024:.0f}MB -> {args.hlos1}MB")
+                hlos_tag = f"{hlos_tag}p{args.hlos1}" if hlos_tag else f"hlos{args.hlos1}"
+                break
+
+    # Auto-name output if overrides were applied and no explicit name given
+    if hlos_tag and args.output == 'gpt_main0.bin':
+        args.output = f'gpt_main0-{hlos_tag}.bin'
 
     # Generate GPT
     full_disk = args.full_disk
